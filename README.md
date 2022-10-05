@@ -123,7 +123,7 @@ curl $HTTP_SERVER:8080/ui
    ```bash
    export CCSM_ENABLED="true" # set this ONLY if using consul connect
 
-   NS="greeter_server"
+   NS="greeter-server"
    HTTP_SERVER="greeter-server.$NS.svc.cluster.local"
    if [[ "$CCSM_ENABLED" == "true" ]]; then
      GRPC_SERVER="greeter-server-grpc.$NS.svc.cluster.local"
