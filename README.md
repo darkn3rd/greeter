@@ -6,16 +6,27 @@ This code is based on example from gRPC's [Python/Getting Started](https://grpc.
 
 ### Pyenv + Virtualenv
 
+If you want to run on the host, you can run it locally using this:
+
 ```bash
+# create virtual environment for greeter (NOTE: requires pyenv and pyenv-virtualenv)
 pyenv virtualenv $PYTHON_VERSION greeter-$PYTHON_VERSION
+# set virtual env to greeter's virtualenv
 pyenv shell greeter-$PYTHON_VERSION
+
+# install required python modules
 pip install -r requirements.txt
+
+# run server
 python greeter_server.py
 ```
 
 ### Docker
 ```bash
+# build image locally
 docker build --tag greeter-server .
+
+# run serer in background
 docker run --detach --name greeter_server \
   --publish 9080:9080 --publish 8080:8080 greeter-server:latest
 ```
@@ -24,6 +35,7 @@ docker run --detach --name greeter_server \
 
 ```bash
 export DOCKER_REGISTRY="<your_registry_goes_here>"
+docker build --tag greeter-server .
 docker tag greeter-server:latest ${DOCKER_REGISTRY}/greeter-server:latest
 docker push ${DOCKER_REGISTRY}/greeter-server:latest
 ```
@@ -59,14 +71,16 @@ The "<server_address>" is the hostname or IP address of the server.  So if the s
 ## gRPC Reflection
 
 ```bash
-grpcurl -plaintext localhost:9080 list
+GRPC_SERVER="localhost"
+
+grpcurl -plaintext $GRPC_SERVER:9080 list
 # grpc.reflection.v1alpha.ServerReflection
 # helloworld.Greeter
-grpcurl -plaintext localhost:9080 describe helloworld.Greeter
+grpcurl -plaintext $GRPC_SERVER:9080 describe helloworld.Greeter
 # service Greeter {
 #   rpc SayHello ( .helloworld.HelloRequest ) returns ( .helloworld.HelloReply );
 # }
-grpcurl -plaintext localhost:9080 describe .helloworld.HelloRequest
+grpcurl -plaintext $GRPC_SERVER:9080 describe .helloworld.HelloRequest
 # helloworld.HelloRequest is a message:
 # message HelloRequest {
 #   string name = 1;
@@ -76,7 +90,8 @@ grpcurl -plaintext localhost:9080 describe .helloworld.HelloRequest
 ## OpenAPI
 
 ```bash
-curl localhost:8080/ui
+HTTP_SERVER="localhost"
+curl $HTTP_SERVER:8080/ui
 ```
 
 
@@ -84,9 +99,10 @@ curl localhost:8080/ui
 
 1. Deploy Server and Client:
    ```bash
-   export CCSM_ENABLED=true # set this ONLY if using consul connect
+   export DOCKER_REGISTRY="<your-registry-goes-here>"
+   export CCSM_ENABLED="true" # set this ONLY if using consul connect
 
-   helmfile --file deploy/deploy.yaml apply
+   helmfile --file deploy/helmfile.yaml apply
    ```
 2. Exec into container:
    ```bash
@@ -95,19 +111,21 @@ curl localhost:8080/ui
      --namespace greeter-client \
      --output name
    )
+
+   # exec into the container
    kubectl exec --tty --stdin \
      --container "greeter-client" \
      --namespace "greeter-client" \
      $GREETER_CLIENT_POD \
      -- bash
    ```
-3. Run test:
+3. Run tests within the container:
    ```bash
+   export CCSM_ENABLED="true" # set this ONLY if using consul connect
 
-   export CCSM_ENABLED=true # set this ONLY if using consul connect
    NS="greeter_server"
    HTTP_SERVER="greeter-server.$NS.svc.cluster.local"
-   if [[ CCSM_ENABLED == "true" ]]; then
+   if [[ "$CCSM_ENABLED" == "true" ]]; then
      GRPC_SERVER="greeter-server-grpc.$NS.svc.cluster.local"
    else
      GRPC_SERVER="greeter-server.$NS.svc.cluster.local"
